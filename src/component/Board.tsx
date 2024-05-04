@@ -1,13 +1,13 @@
 import React, { useRef, useEffect, useState } from 'react';
-import io from 'socket.io-client';
+import io, { Socket as SocketIOClient } from 'socket.io-client';
 
-const Board = () => {
+const Board: React.FC = () => {
 
     const brushColor: string = 'red';
     const brushSize: number = 4;
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
-    const [socket, setSocket] = useState(null);
+    const [socket, setSocket] = useState<SocketIOClient | null>(null);
 
     useEffect(() => {
         const newSocket = io('http://localhost:8090');
@@ -17,14 +17,16 @@ const Board = () => {
 
     useEffect(() => {
         if (socket)
-            socket.on('board', (data) => {
+            socket.on('board', (data: string) => {
                 const image = new Image();
                 image.src = data;
 
                 const canvas = canvasRef.current;
 
-                const ctx = canvas.getContext('2d');
-                image.onload = () => ctx.drawImage(image, 0, 0);
+                const ctx = canvas?.getContext('2d');
+                if (ctx && image.complete) {
+                    ctx.drawImage(image, 0, 0);
+                }
             });
     }, [socket]);
 
@@ -34,31 +36,30 @@ const Board = () => {
         let isDrawing = false;
         let lastX = 0;
         let lastY = 0;
-        const startDrawing = (e: { offsetX: number; offsetY: number; }) => {
+        const startDrawing = (e: MouseEvent) => {
+            const mouseEvent = e as MouseEvent;
             isDrawing = true;
-
-            [lastX, lastY] = [e.offsetX, e.offsetY];
+            [lastX, lastY] = [mouseEvent.offsetX, mouseEvent.offsetY];
         };
 
-        const draw = (e: { offsetX: number; offsetY: number; }) => {
+        const draw = (e: MouseEvent) => {
+            const mouseEvent = e as MouseEvent;
             if (!isDrawing) return;
-
             const canvas = canvasRef.current;
-            const ctx = canvas.getContext('2d');
-
+            const ctx = canvas?.getContext('2d');
             if (ctx) {
                 ctx.beginPath();
                 ctx.moveTo(lastX, lastY);
-                ctx.lineTo(e.offsetX, e.offsetY);
+                ctx.lineTo(mouseEvent.offsetX, mouseEvent.offsetY);
                 ctx.stroke();
             }
-
-            [lastX, lastY] = [e.offsetX, e.offsetY];
+            [lastX, lastY] = [mouseEvent.offsetX, mouseEvent.offsetY];
         };
+
 
         const endDrawing = () => {
             const canvas = canvasRef.current;
-            const dataURL = canvas.toDataURL();
+            const dataURL = canvas?.toDataURL();
 
             if (socket)
                 socket.emit('board', dataURL);
@@ -67,7 +68,7 @@ const Board = () => {
         };
 
         const canvas: HTMLCanvasElement | null = canvasRef.current;
-        const ctx = canvasRef.current?.getContext('2d');
+        const ctx = canvas?.getContext('2d');
 
         if (ctx) {
             ctx.strokeStyle = brushColor;
@@ -76,6 +77,9 @@ const Board = () => {
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
         }
+
+        if(!canvas)
+            return () => {};
 
         canvas.addEventListener('mousedown', startDrawing);
         canvas.addEventListener('mousemove', draw);
@@ -91,7 +95,7 @@ const Board = () => {
     }, [brushColor, brushSize, socket]);
 
 
-    const [windowSize, setWindowSize] = useState([
+    const [windowSize, setWindowSize] = useState<[number, number]>([
         window.innerWidth,
         window.innerHeight,
     ]);
