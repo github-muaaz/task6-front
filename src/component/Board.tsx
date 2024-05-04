@@ -10,7 +10,7 @@ const Board: React.FC = () => {
     const [socket, setSocket] = useState<SocketIOClient | null>(null);
 
     useEffect(() => {
-        const newSocket = io('https://itransition-task6-back-muaaz.netlify.app');
+        const newSocket = io('https://task6-back-1ndv8m02q-github-muaazs-projects.vercel.app');
         setSocket(newSocket);
     }, []);
 
